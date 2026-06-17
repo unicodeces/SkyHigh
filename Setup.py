@@ -23,6 +23,24 @@ subprocess.run([PYTHON, "-m", "pip", "install", "torch", "torchvision",
 
 subprocess.run([PYTHON, "-m", "pip", "install", "-r", os.path.join(BASE, "requirements.txt")])
 
+resultado = subprocess.run(
+    [PYTHON, "-c", "import basicsr, os; print(os.path.dirname(basicsr.__file__))"],
+    capture_output=True, text=True
+)
+basicsr_dir = resultado.stdout.strip()
+if basicsr_dir:
+    degradations_path = os.path.join(basicsr_dir, "data", "degradations.py")
+    if os.path.exists(degradations_path):
+        with open(degradations_path, "r", encoding="utf-8") as f:
+            conteudo = f.read()
+        conteudo_corrigido = conteudo.replace(
+            "from torchvision.transforms.functional_tensor import rgb_to_grayscale",
+            "from torchvision.transforms.functional import rgb_to_grayscale",
+        )
+        if conteudo_corrigido != conteudo:
+            with open(degradations_path, "w", encoding="utf-8") as f:
+                f.write(conteudo_corrigido)
+
 MODELOS = {
     "RealESRGAN_x4plus_anime_6B.pth": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
     "RealESRGAN_x4plus.pth": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
