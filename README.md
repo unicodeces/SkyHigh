@@ -27,19 +27,28 @@ git clone https://github.com/unicodeces/SkyHigh.git
 cd SkyHigh
 ```
 
-Run the setup script. It installs PyTorch with CUDA 12.1 support, installs all dependencies from `requirements.txt`, and downloads the required Real-ESRGAN model weights:
+Run the setup script. On Windows, it installs dependencies directly into your active Python environment. On Linux/macOS, it automatically creates a virtual environment (`venv/`) and installs everything inside it, avoiding conflicts with system-managed Python packages (PEP 668). Either way, it installs PyTorch with CUDA 12.1 support, installs all dependencies from `requirements.txt`, downloads the required Real-ESRGAN model weights, and launches the tool automatically:
 
 ```bash
 python Setup.py
 ```
 
-Once setup finishes, it automatically launches `upscale.py`.
-
 ### Manual installation
 
 If you prefer to install dependencies manually:
 
+**Windows:**
+
 ```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
+```
+
+**Linux/macOS (recommended: virtual environment):**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 ```
@@ -56,9 +65,18 @@ If no graphical environment is detected, SkyHigh automatically falls back to ter
 
 ## Usage
 
-Run the tool directly:
+If you ran `Setup.py`, the tool launches automatically after installation. To run it again later:
+
+**Windows:**
 
 ```bash
+python upscale.py
+```
+
+**Linux/macOS** (activate the virtual environment created by `Setup.py` first):
+
+```bash
+source venv/bin/activate
 python upscale.py
 ```
 
@@ -93,7 +111,8 @@ SkyHigh/
 ├── Setup.py            # One-step installer and launcher
 ├── upscale.py          # Main application
 ├── requirements.txt    # Python dependencies
-└── weights/            # Downloaded model weights (created automatically)
+├── weights/            # Downloaded model weights (created automatically)
+└── venv/                # Virtual environment on Linux/macOS (created automatically)
 ```
 
 ## Credits
