@@ -1,0 +1,10 @@
+torch
+torchvision
+realesrgan
+basicsr
+facexlib
+gfpgan
+opencv-python
+numpy
+Pillow
+colorama
