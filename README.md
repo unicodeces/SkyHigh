@@ -117,6 +117,6 @@ SkyHigh/
 
 ## Credits
 
-Developed by **Daishinkan**
+Developed by **Unicodeces**
 
 Powered by [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (Xintao Wang et al.)
