@@ -1,5 +1,7 @@
 # SkyHigh
 
+![SkyHigh Preview](https://letsenhance.io/blog/content/images/2026/04/anime-upscale-letsenhance.jpg)
+
 SkyHigh is a command-line image upscaling tool powered by [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN). It increases image resolution and sharpness using GPU-accelerated AI super-resolution, with dedicated models for anime/illustration and realistic photos.
 
 ## Features
