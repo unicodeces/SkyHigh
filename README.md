@@ -112,8 +112,41 @@ SkyHigh/
 ├── upscale.py          # Main application
 ├── requirements.txt    # Python dependencies
 ├── weights/            # Downloaded model weights (created automatically)
-└── venv/                # Virtual environment on Linux/macOS (created automatically)
+└── venv/               # Virtual environment on Linux/macOS (created automatically)
 ```
+
+## Troubleshooting
+
+### `ModuleNotFoundError: No module named 'torchvision.transforms.functional_tensor'`
+
+This error occurs because newer versions of `torchvision` removed the `functional_tensor` module, which `basicsr` still references. To fix it, run the following one-liner in your terminal:
+
+**Windows:**
+
+```bash
+python -c "p=r'C:\Users\Admin\AppData\Local\Programs\Python\Python312\Lib\site-packages\basicsr\data\degradations.py';t=open(p,'r',encoding='utf-8').read();open(p,'w',encoding='utf-8').write(t.replace('from torchvision.transforms.functional_tensor import rgb_to_grayscale','from torchvision.transforms.functional import rgb_to_grayscale'))"
+```
+
+> **Note:** Replace the path with your actual Python installation path if it differs. You can find it by running `python -c "import site; print(site.getsitepackages())"`.
+
+**Linux/macOS:**
+
+```bash
+python -c "
+import site, os
+for sp in site.getsitepackages():
+    p = os.path.join(sp, 'basicsr', 'data', 'degradations.py')
+    if os.path.exists(p):
+        t = open(p, 'r').read()
+        open(p, 'w').write(t.replace('from torchvision.transforms.functional_tensor import rgb_to_grayscale', 'from torchvision.transforms.functional import rgb_to_grayscale'))
+        print('Fixed:', p)
+        break
+"
+```
+
+This patches the `basicsr` source directly, replacing the outdated import with the correct one for newer versions of `torchvision`.
+
+---
 
 ## Credits
 
