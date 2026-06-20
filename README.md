@@ -19,6 +19,7 @@ SkyHigh is a command-line image upscaling tool powered by [Real-ESRGAN](https://
 - Python 3.9 or higher
 - NVIDIA GPU with CUDA support (recommended for best performance)
 - Windows or Linux
+- **Windows only:** [Microsoft Visual C++ Redistributable 2015-2022 (x64)](https://aka.ms/vc14/vc_redist.x64.exe) — required by PyTorch/CUDA. `Setup.py` installs this automatically if not present.
 
 ## Installation
 
@@ -121,7 +122,9 @@ SkyHigh/
 
 ### `ModuleNotFoundError: No module named 'torchvision.transforms.functional_tensor'`
 
-This error occurs because newer versions of `torchvision` removed the `functional_tensor` module, which `basicsr` still references. To fix it, run the following one-liner in your terminal:
+This error occurs because newer versions of `torchvision` removed the `functional_tensor` module, which `basicsr` still references.
+
+If you installed via `Setup.py`, this is patched automatically. If you installed manually, run the following command:
 
 **Windows:**
 
@@ -145,8 +148,6 @@ for sp in site.getsitepackages():
         break
 "
 ```
-
-This patches the `basicsr` source directly, replacing the outdated import with the correct one for newer versions of `torchvision`.
 
 ---
 
