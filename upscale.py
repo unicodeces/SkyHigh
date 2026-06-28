@@ -1,3 +1,5 @@
+import contextlib
+import io
 import os
 import sys
 import urllib.request
@@ -129,13 +131,9 @@ def garantir_modelo(categoria):
     return destino
 
 
-def construir_motor(categoria, tile=0):
+def construir_motor(categoria, tile=0, dispositivo="cuda"):
     info = MODELOS[categoria]
     modelo_path = garantir_modelo(categoria)
-
-    gpu_disponivel = torch.cuda.is_available()
-    dispositivo = "cuda" if gpu_disponivel else "cpu"
-    log_info(f"Processing device: {dispositivo.upper()}")
 
     arquitetura = RRDBNet(
         num_in_ch=3,
@@ -168,13 +166,35 @@ def processar_imagem(caminho_entrada, caminho_saida, motor, fator_escala=4.0):
     nome = os.path.basename(caminho_entrada)
     log_info(f"Processing {nome} ({imagem.shape[1]}x{imagem.shape[0]})")
 
+    def enhance_silencioso(img, escala):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return motor.enhance(img, outscale=escala)
+
     try:
-        resultado, _ = motor.enhance(imagem, outscale=fator_escala)
+        resultado, _ = enhance_silencioso(imagem, fator_escala)
     except RuntimeError as erro:
         if "out of memory" in str(erro).lower():
-            log_erro("Insufficient GPU memory for this image.")
-            return False
-        raise
+            log_aviso("Insufficient GPU memory. Retrying with tile=256...")
+            torch.cuda.empty_cache()
+            motor.tile = 256
+            try:
+                resultado, _ = enhance_silencioso(imagem, fator_escala)
+            except RuntimeError as erro2:
+                if "out of memory" in str(erro2).lower():
+                    log_aviso("Still out of memory. Retrying with tile=128...")
+                    torch.cuda.empty_cache()
+                    motor.tile = 128
+                    try:
+                        resultado, _ = enhance_silencioso(imagem, fator_escala)
+                    except RuntimeError as erro3:
+                        if "out of memory" in str(erro3).lower():
+                            log_erro("Insufficient GPU memory even with minimum tile. Try a smaller scale.")
+                            return False
+                        raise
+                else:
+                    raise
+        else:
+            raise
 
     cv2.imwrite(caminho_saida, resultado)
     log_sucesso(f"Saved: {caminho_saida} ({resultado.shape[1]}x{resultado.shape[0]})")
@@ -218,6 +238,48 @@ def abrir_seletor_pasta(titulo):
     return caminho
 
 
+def escolher_escala():
+    reset = "\033[0m"
+    branco = "\033[38;2;230;230;235m"
+    destaque = "\033[38;2;90;60;200m"
+
+    print()
+    print(f"  {destaque}[1]{reset} {branco}2x{reset}")
+    print(f"  {destaque}[2]{reset} {branco}4x{reset}")
+    print()
+
+    opcoes = {"1": 2.0, "2": 4.0}
+    while True:
+        escolha = input("  > ").strip()
+        if escolha in opcoes:
+            return opcoes[escolha]
+        log_erro("Invalid option. Choose 1 or 2.")
+
+
+def detectar_gpu():
+    if not torch.cuda.is_available():
+        log_aviso("No NVIDIA GPU detected. Using CPU.")
+        return "cpu", 0
+
+    nome = torch.cuda.get_device_name(0)
+    vram_bytes = torch.cuda.get_device_properties(0).total_memory
+    vram_gb = vram_bytes / (1024 ** 3)
+
+    if vram_gb >= 10:
+        tile = 0
+    elif vram_gb >= 6:
+        tile = 512
+    elif vram_gb >= 4:
+        tile = 256
+    else:
+        tile = 128
+
+    tile_str = "no tile" if tile == 0 else f"tile {tile}"
+    log_info(f"GPU: {nome} ({vram_gb:.1f} GB VRAM) {tile_str}")
+    return "cuda", tile
+
+
+
 def executar_fluxo_arquivo_unico(categoria):
     log_info("Waiting for image selection...")
     entrada = abrir_seletor_arquivo()
@@ -231,11 +293,15 @@ def executar_fluxo_arquivo_unico(categoria):
         log_aviso("Operation cancelled.")
         return
 
-    nome_base, _ = os.path.splitext(os.path.basename(entrada))
-    saida = os.path.join(pasta_saida, f"{nome_base}_upscaled.png")
+    escala = escolher_escala()
+    dispositivo, tile = detectar_gpu()
 
-    motor = construir_motor(categoria)
-    processar_imagem(entrada, saida, motor)
+    sufixo = f"_{escala}x" if escala != int(escala) else f"_{int(escala)}x"
+    nome_base, _ = os.path.splitext(os.path.basename(entrada))
+    saida = os.path.join(pasta_saida, f"{nome_base}_upscaled{sufixo}.png")
+
+    motor = construir_motor(categoria, tile=tile, dispositivo=dispositivo)
+    processar_imagem(entrada, saida, motor, fator_escala=escala)
 
 
 def executar_fluxo_pasta(categoria):
@@ -258,17 +324,21 @@ def executar_fluxo_pasta(categoria):
         log_aviso("Operation cancelled.")
         return
 
-    motor = construir_motor(categoria)
+    escala = escolher_escala()
+    dispositivo, tile = detectar_gpu()
+
+    motor = construir_motor(categoria, tile=tile, dispositivo=dispositivo)
 
     total = len(arquivos)
     sucessos = 0
     for indice, nome_arquivo in enumerate(arquivos, start=1):
         entrada = os.path.join(pasta_entrada, nome_arquivo)
         nome_base, _ = os.path.splitext(nome_arquivo)
-        saida = os.path.join(pasta_saida, f"{nome_base}_upscaled.png")
+        sufixo = f"_{escala}x" if escala != int(escala) else f"_{int(escala)}x"
+        saida = os.path.join(pasta_saida, f"{nome_base}_upscaled{sufixo}.png")
 
         print(f"\033[38;2;130;130;140m[{indice}/{total}]\033[0m", end=" ")
-        if processar_imagem(entrada, saida, motor):
+        if processar_imagem(entrada, saida, motor, fator_escala=escala):
             sucessos += 1
 
     print()
