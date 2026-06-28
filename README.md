@@ -6,9 +6,10 @@ SkyHigh is a command-line image upscaling tool powered by [Real-ESRGAN](https://
 
 ## Features
 
-- AI-based super-resolution upscaling (4x) via Real-ESRGAN
+- AI-based super-resolution upscaling (**2x or 4x**) via Real-ESRGAN
 - Dedicated models for **anime/illustration** and **realistic photos**
 - Single image or full folder batch processing
+- **Automatic GPU detection** — reads model name and VRAM, selects optimal tile size automatically
 - Native file picker on Windows, with automatic terminal fallback on Linux
 - CUDA GPU acceleration with automatic CPU fallback
 - Clean terminal interface with color-coded status output
@@ -101,11 +102,41 @@ You'll be presented with the following menu:
 | **3** | Upscales a single realistic photo |
 | **4** | Batch upscales all supported images in a folder using the realistic model |
 
-After selecting an option, you'll be prompted to choose the input file/folder and the output destination. Model weights are downloaded automatically on first use and cached locally in the `weights/` folder.
+After selecting an option, you'll be prompted to choose the input file/folder, the output destination, and the upscale factor.
+
+### Scale selection
+
+```
+  [1] 2x
+  [2] 4x
+```
+
+Choose **2x** for large source images or limited VRAM. Choose **4x** for maximum output resolution.
+
+### Automatic GPU detection and tile selection
+
+SkyHigh automatically reads your GPU model and available VRAM, then selects the optimal tile size with no configuration needed:
+
+```
+[*] GPU: NVIDIA GeForce RTX 4060 (8.0 GB VRAM) → tile 512
+```
+
+Tile processing splits the image into smaller chunks so the GPU can handle large images without running out of memory. The tile size is chosen based on detected VRAM:
+
+| VRAM | Tile size |
+|---|---|
+| ≥ 10 GB | No tile (fastest) |
+| 6 – 10 GB | 512 |
+| 4 – 6 GB | 256 |
+| < 4 GB | 128 |
+
+If no NVIDIA GPU is detected, SkyHigh falls back to CPU processing automatically.
+
+Model weights are downloaded automatically on first use and cached locally in the `weights/` folder. Output files are saved with a suffix indicating the scale used (e.g. `image_upscaled_4x.png`).
 
 ## How it works
 
-SkyHigh loads the appropriate Real-ESRGAN architecture (`RealESRGAN_x4plus_anime_6B` for anime, `RealESRGAN_x4plus` for realistic photos) and runs inference on GPU when CUDA is available, falling back to CPU otherwise. Each processed image is upscaled 4x and saved to the chosen output folder with an `_upscaled` suffix.
+SkyHigh loads the appropriate Real-ESRGAN architecture (`RealESRGAN_x4plus_anime_6B` for anime, `RealESRGAN_x4plus` for realistic photos) and runs inference on GPU when CUDA is available, falling back to CPU otherwise. The image is processed in tiles when needed and reassembled seamlessly, then saved to the chosen output folder.
 
 ## Project structure
 
